@@ -1,0 +1,50 @@
+
+# Gradle
+/.gradle/
+/build/
+
+# Minecraft development environment
+/run/
+/runServer/
+
+# IDE
+/.idea/
+/.vscode/
+/.settings/
+.classpath
+.project
+*.iml
+
+# Compiled files
+/bin/
+/out/
+*.class
+*.jar
+
+# Keep Gradle Wrapper
+!/gradle/wrapper/gradle-wrapper.jar
+
+# Logs
+*.log
+/logs/
+
+# Local server data
+/saves/
+/world/
+/config/
+/crash-reports/
+
+# Private data
+.env
+.env.*
+secrets.json
+server.properties
+ops.json
+whitelist.json
+usercache.json
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+AGENTS.md

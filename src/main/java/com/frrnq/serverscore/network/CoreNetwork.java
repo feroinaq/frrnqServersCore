@@ -13,5 +13,6 @@ public final class CoreNetwork {
         CHANNEL.registerMessage(ResourceSettingsMessage.Handler.class, ResourceSettingsMessage.class, 1, Side.SERVER);
         CHANNEL.registerMessage(ResourceNoticeMessage.Handler.class, ResourceNoticeMessage.class, 2, Side.CLIENT);
         CHANNEL.registerMessage(AirDropEditorMessage.Handler.class, AirDropEditorMessage.class, 3, Side.CLIENT);
+        CHANNEL.registerMessage(TeamStatusMessage.Handler.class, TeamStatusMessage.class, 4, Side.CLIENT);
     }
 }

@@ -117,6 +117,7 @@ public final class TeamCommand extends CommandBase {
                     TeamSpawn.teleport(player, pos); reserved.add(pos); count++;
                 }
                 message(sender, "\u0422\u0435\u043b\u0435\u043f\u043e\u0440\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0438\u0433\u0440\u043e\u043a\u043e\u0432: " + count);
+                if (count > 0) { data.activateHud(); data.save(server); }
                 CoreNetwork.CHANNEL.sendToAll(ResourceNoticeMessage.gameStart());
                 return;
             }

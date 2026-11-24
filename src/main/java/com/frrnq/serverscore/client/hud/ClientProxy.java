@@ -8,9 +8,10 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
 public final class ClientProxy extends CommonProxy {
+    private final TeamStatusHud teams = new TeamStatusHud();
     private final LivesHud hud = new LivesHud();
     private final com.frrnq.serverscore.client.resource.ResourceNoticeHud notices = new com.frrnq.serverscore.client.resource.ResourceNoticeHud();
-    @Override public void init() { MinecraftForge.EVENT_BUS.register(hud); MinecraftForge.EVENT_BUS.register(notices); }
+    @Override public void init() { MinecraftForge.EVENT_BUS.register(hud); MinecraftForge.EVENT_BUS.register(teams); MinecraftForge.EVENT_BUS.register(notices); MinecraftForge.EVENT_BUS.register(new com.frrnq.serverscore.client.hud.BorderWarningHud()); }
     @Override public Object resourceEditor(net.minecraft.entity.player.EntityPlayer player, com.frrnq.serverscore.resourcechests.ResourceChestTile tile) {
         return new com.frrnq.serverscore.client.resource.ResourceEditorGui(player, tile);
     }
@@ -19,7 +20,7 @@ public final class ClientProxy extends CommonProxy {
         Minecraft minecraft = Minecraft.getMinecraft();
         minecraft.addScheduledTask(() -> {
             if (minecraft.getConnection() != null && minecraft.getConnection().getNetworkManager() == source) {
-                notices.show(source, message.location, message.type);
+                notices.show(source, message.location, message.type, message.remainingMillis);
             }
         });
     }
@@ -30,6 +31,15 @@ public final class ClientProxy extends CommonProxy {
             if (mc.player != null && mc.getConnection() != null && mc.getConnection().getNetworkManager() == source) {
                 mc.displayGuiScreen(new com.frrnq.serverscore.client.airdrop.AirDropEditorGui(
                         mc.player.inventory, message.name, message.windowId));
+            }
+        });
+    }
+    @Override public void teamStatus(com.frrnq.serverscore.network.TeamStatusMessage message, MessageContext context) {
+        Minecraft mc = Minecraft.getMinecraft();
+        NetworkManager source = context.getClientHandler().getNetworkManager();
+        mc.addScheduledTask(() -> {
+            if (mc.getConnection() != null && mc.getConnection().getNetworkManager() == source) {
+                teams.update(source, message);
             }
         });
     }

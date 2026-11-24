@@ -38,14 +38,29 @@ public final class ResourceNoticeHud extends Gui {
     private NetworkManager connection;
     private String location;
     private Type type;
+    public static final double BORDER_START_SECONDS = 7;
+    public static final double BORDER_END_SECONDS = 5;
+    private long remainingMillis;
     private long started;
-    public void show(NetworkManager source, String name, Type noticeType) {
+    public void show(NetworkManager source, String name, Type noticeType, long remaining) {
         Minecraft mc = Minecraft.getMinecraft();
-        if (name == null || (name.isEmpty() && noticeType != Type.AIRDROP && noticeType != Type.GAME_START) || name.length() > 48 || mc.player == null || mc.world == null) { return; }
+        if (name == null || (name.isEmpty() && noticeType != Type.AIRDROP && noticeType != Type.GAME_START && noticeType != Type.BORDER_START && noticeType != Type.BORDER_END) || name.length() > 48 || mc.player == null || mc.world == null) { return; }
         if (connection != source) { pendingTones.clear(); }
-        connection = source; location = name; type = noticeType; started = System.nanoTime();
+        connection = source; location = name; type = noticeType; started = System.nanoTime(); remainingMillis = remaining;
         // Schedule once per event. Natural note decay extends the short motif
         // to approximately 1.5-2 seconds; user volume/category settings still apply.
+        if (type == Type.BORDER_START) {
+            mc.player.playSound(SoundEvents.BLOCK_NOTE_BASS, SOUND_VOLUME, .7F);
+            for (int i = 1; i <= 4; i++) {
+                pendingTones.add(new ScheduledTone(SoundEvents.BLOCK_NOTE_BASS, .7F + i * .05F, SOUND_GAP_TICKS * i));
+            }
+            return;
+        }
+        if (type == Type.BORDER_END) {
+            mc.player.playSound(SoundEvents.BLOCK_NOTE_CHIME, SOUND_VOLUME, 1.0F);
+            pendingTones.add(new ScheduledTone(SoundEvents.BLOCK_NOTE_PLING, 1.2F, SOUND_GAP_TICKS));
+            return;
+        }
         if (type == Type.GAME_START) {
             mc.player.playSound(SoundEvents.BLOCK_NOTE_CHIME, GAME_START_SOUND_VOLUME, 0.9F);
             pendingTones.add(new ScheduledTone(SoundEvents.BLOCK_NOTE_HARP, GAME_START_SOUND_VOLUME, SOUND_GAP_TICKS));
@@ -92,7 +107,12 @@ public final class ResourceNoticeHud extends Gui {
             }
         }
     }
-    private long durationNanos() { return type == Type.GAME_START ? 7000000000L : 5000000000L; }
+    private double durationSeconds() {
+        if (type == Type.BORDER_START) { return BORDER_START_SECONDS; }
+        if (type == Type.BORDER_END) { return BORDER_END_SECONDS; }
+        return type == Type.GAME_START ? 7 : 5;
+    }
+    private long durationNanos() { return (long) (durationSeconds() * 1000000000L); }
     private static int tint(int rgb, int alpha) { return (alpha << 24) | rgb; }
     @SubscribeEvent public void render(RenderGameOverlayEvent.Post event) {
         Minecraft mc = Minecraft.getMinecraft();
@@ -100,15 +120,17 @@ public final class ResourceNoticeHud extends Gui {
                 || mc.world == null || mc.player == null || mc.gameSettings.hideGUI || mc.getConnection() == null
                 || mc.getConnection().getNetworkManager() != connection) { return; }
         double age = (System.nanoTime() - started) / 1000000000.0;
-        double duration = type == Type.GAME_START ? 7 : 5;
+        double duration = durationSeconds();
         double fade = type == Type.GAME_START ? .45 : .35;
         float opacity = (float) Math.max(0, Math.min(1, Math.min(age / fade, (duration - age) / fade)));
         int alpha = Math.round(255 * opacity);
         if (alpha < 4) { return; }
         int width = event.getResolution().getScaledWidth(), height = event.getResolution().getScaledHeight();
         float livesScale = Math.min(LivesHud.HUD_SCALE, Math.min(width / 160.0F, height / 74.0F));
-        int top = (int) Math.ceil(74 * livesScale) + 6;
-        float scale = Math.min(1, Math.min((width - 8) / 320.0F, (height - top - 8) / 80.0F));
+        int top = (int) Math.ceil(74 * livesScale) + 6
+                + com.frrnq.serverscore.client.hud.BorderWarningHud.reservedHeight(mc, width);
+        int panelHeight = type == Type.BORDER_START || type == Type.BORDER_END ? 112 : 80;
+        float scale = Math.min(1, Math.min((width - 8) / 320.0F, (height - top - 8) / (float) panelHeight));
         if (scale <= 0) { return; }
         boolean blend = GL11.glIsEnabled(GL11.GL_BLEND), texture = GL11.glIsEnabled(GL11.GL_TEXTURE_2D), test = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
         int boundTexture = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
@@ -119,16 +141,34 @@ public final class ResourceNoticeHud extends Gui {
         try {
             GlStateManager.translate((width - 320 * scale) / 2, top - 6 * (1 - opacity), 0);
             GlStateManager.scale(scale, scale, 1);
-            drawRect(0, 0, 320, 80, tint(0x10141C, Math.round(190 * opacity)));
+            drawRect(0, 0, 320, panelHeight, tint(0x10141C, Math.round(190 * opacity)));
             int accent = type == Type.AIRDROP ? 0x55D7D6 : 0xE04B55;
-            drawRect(0, 0, 2, 80, tint(accent, alpha));
+            drawRect(0, 0, 2, panelHeight, tint(accent, alpha));
             // A small pixel resource-crate icon, with the same fade as the panel.
             drawRect(10, 24, 31, 43, tint(0xB8BDC8, alpha));
             drawRect(12, 26, 29, 41, tint(0x303744, alpha));
             drawRect(19, 25, 22, 42, tint(accent, alpha));
             drawRect(11, 31, 30, 34, tint(accent, alpha));
             GlStateManager.enableBlend(); GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
-            if (type == Type.GAME_START) {
+            if (type == Type.BORDER_START || type == Type.BORDER_END) {
+                mc.fontRenderer.drawString("FRRNQ SERVERS", 40, 8, tint(0xB8BDC8, alpha));
+                boolean shrinking = type == Type.BORDER_START;
+                String heading = shrinking ? "\u0412\u041d\u0418\u041c\u0410\u041d\u0418\u0415! \u0411\u0410\u0420\u042c\u0415\u0420" : "\u0421\u0423\u0416\u0415\u041d\u0418\u0415 \u0417\u0410\u0412\u0415\u0420\u0428\u0415\u041d\u041e";
+                String main = shrinking ? "\u0413\u0440\u0430\u043d\u0438\u0446\u0430 \u0438\u0433\u0440\u043e\u0432\u043e\u0433\u043e \u043c\u0438\u0440\u0430 \u0441\u0443\u0436\u0430\u0435\u0442\u0441\u044f!" : "\u0413\u0440\u0430\u043d\u0438\u0446\u0430 \u0438\u0433\u0440\u043e\u0432\u043e\u0433\u043e \u043c\u0438\u0440\u0430 \u0434\u043e\u0441\u0442\u0438\u0433\u043b\u0430 \u043d\u043e\u0432\u043e\u0433\u043e \u0440\u0430\u0437\u043c\u0435\u0440\u0430.";
+                String help = shrinking ? "\u041e\u0441\u0442\u0430\u0432\u0430\u0439\u0442\u0435\u0441\u044c \u0432\u043d\u0443\u0442\u0440\u0438 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0439 \u0437\u043e\u043d\u044b." : "\u041e\u0441\u0442\u0430\u0432\u0430\u0439\u0442\u0435\u0441\u044c \u0432 \u043f\u0440\u0435\u0434\u0435\u043b\u0430\u0445 \u0431\u0430\u0440\u044c\u0435\u0440\u0430.";
+                mc.fontRenderer.drawString(heading, 40, 23, tint(accent, alpha));
+                int y = 39;
+                for (String line : mc.fontRenderer.listFormattedStringToWidth(main, 270)) {
+                    mc.fontRenderer.drawString(line, 40, y, tint(0xF5F0F5, alpha)); y += 10;
+                }
+                for (String line : mc.fontRenderer.listFormattedStringToWidth(help, 270)) {
+                    mc.fontRenderer.drawString(line, 40, y + 4, tint(0xF5F0F5, alpha)); y += 10;
+                }
+                if (shrinking) {
+                    long seconds = (long) Math.ceil(Math.max(0, remainingMillis / 1000.0 - age));
+                    mc.fontRenderer.drawString("\u0414\u043e \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0438\u044f: " + seconds + " \u0441", 40, y + 10, tint(0xB8BDC8, alpha));
+                }
+            } else if (type == Type.GAME_START) {
                 mc.fontRenderer.drawString("FRRNQ SERVERS \u00b7 GAME START", 40, 8, tint(0xB8BDC8, alpha));
                 mc.fontRenderer.drawString("\u0418\u0413\u0420\u0410 \u041d\u0410\u0427\u0410\u041b\u0410\u0421\u042c!", 40, 23, tint(accent, alpha));
                 mc.fontRenderer.drawString("\u0416\u0435\u043b\u0430\u0435\u043c \u0432\u0441\u0435\u043c \u0438\u0433\u0440\u043e\u043a\u0430\u043c \u0443\u0434\u0430\u0447\u0438!", 40, 43, tint(0xF5F0F5, alpha));

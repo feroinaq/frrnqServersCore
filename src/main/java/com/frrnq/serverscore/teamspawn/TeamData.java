@@ -17,6 +17,23 @@ public final class TeamData extends WorldSavedData {
     private final Map<String, BlockPos> teams = new LinkedHashMap<>();
     private final Map<UUID, String> membership = new LinkedHashMap<>();
     private final Map<String, String> pending = new LinkedHashMap<>();
+    private static final int[] PALETTE = {
+        0xEF5350, 0x4285F4, 0x66BB6A, 0xFFEB3B, 0xFFA726, 0xAB47BC,
+        0x26C6DA, 0xF06292, 0x81D4FA, 0xB2FF59, 0xFFCC80, 0xB39DDB
+    };
+    private final Map<String, Integer> colors = new LinkedHashMap<>();
+    private boolean hudActive;
+    public boolean hudActive() { return hudActive; }
+    public int color(String team) { return colors.get(team); }
+    public void activateHud() { hudActive = true; markDirty(); }
+    private void assignColor(String team) {
+        java.util.List<Integer> available = new java.util.ArrayList<>();
+        for (int color : PALETTE) { if (!colors.containsValue(color)) { available.add(color); } }
+        int color = available.isEmpty() ? PALETTE[java.util.concurrent.ThreadLocalRandom.current().nextInt(PALETTE.length)]
+                : available.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(available.size()));
+        colors.put(team, color);
+        markDirty();
+    }
     public TeamData() { super(KEY); }
     public TeamData(String name) { super(name); }
     public static TeamData get(MinecraftServer server) {
@@ -46,7 +63,7 @@ public final class TeamData extends WorldSavedData {
     public BlockPos spawn(UUID uuid) { return teams.get(team(uuid)); }
     public void create(String name) {
         if (teams.containsKey(name)) { throw new IllegalArgumentException("Duplicate team"); }
-        teams.put(name, null); markDirty();
+        teams.put(name, null); assignColor(name); markDirty();
     }
     public void setSpawn(String name, BlockPos pos) { teams.put(name, pos.toImmutable()); markDirty(); }
     public void add(UUID uuid, String name) {
@@ -56,17 +73,20 @@ public final class TeamData extends WorldSavedData {
         membership.put(uuid, name); markDirty();
     }
     public boolean remove(UUID uuid) { boolean removed = membership.remove(uuid) != null; if (removed) { markDirty(); } return removed; }
-    public void save(MinecraftServer server) { server.getWorld(0).getMapStorage().saveAllData(); }
+    public void save(MinecraftServer server) { server.getWorld(0).getMapStorage().saveAllData(); com.frrnq.serverscore.network.TeamStatusSync.changed(); }
     @Override public void readFromNBT(NBTTagCompound nbt) {
-        teams.clear(); membership.clear(); pending.clear();
+        teams.clear(); membership.clear(); pending.clear(); colors.clear();
+        hudActive = nbt.getBoolean("hudActive");
         NBTTagList list = nbt.getTagList("teams", 10);
         for (int i = 0; i < list.tagCount(); i++) {
             NBTTagCompound entry = list.getCompoundTagAt(i);
             String name = entry.getString("name");
             if (name.matches("[a-z0-9_-]{1,32}")) {
                 teams.put(name, entry.hasKey("spawn", 4) ? BlockPos.fromLong(entry.getLong("spawn")) : null);
+                if (entry.hasKey("color", 3)) { colors.put(name, entry.getInteger("color") & 0xFFFFFF); }
             }
         }
+        for (String name : teams.keySet()) { if (!colors.containsKey(name)) { assignColor(name); } }
         list = nbt.getTagList("members", 10);
         for (int i = 0; i < list.tagCount(); i++) {
             NBTTagCompound entry = list.getCompoundTagAt(i);
@@ -86,9 +106,10 @@ public final class TeamData extends WorldSavedData {
         }
     }
     @Override public NBTTagCompound writeToNBT(NBTTagCompound nbt) {
+        nbt.setBoolean("hudActive", hudActive);
         NBTTagList list = new NBTTagList();
         teams.forEach((name, spawn) -> {
-            NBTTagCompound entry = new NBTTagCompound(); entry.setString("name", name);
+            NBTTagCompound entry = new NBTTagCompound(); entry.setString("name", name); entry.setInteger("color", colors.get(name));
             if (spawn != null) { entry.setLong("spawn", spawn.toLong()); }
             list.appendTag(entry);
         });

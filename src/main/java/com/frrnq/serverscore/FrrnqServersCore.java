@@ -24,8 +24,16 @@ public class FrrnqServersCore {
 
     @EventHandler
     public void serverStopped(net.minecraftforge.fml.common.event.FMLServerStoppedEvent event) {
+        com.frrnq.serverscore.worldborder.WorldBorderNotifications.stop();
         com.frrnq.serverscore.airdrop.AirDrops.stopped();
         com.frrnq.serverscore.network.DeathSync.clear();
+        com.frrnq.serverscore.network.TeamStatusSync.clear();
+    }
+
+    @EventHandler
+    public void serverStarted(net.minecraftforge.fml.common.event.FMLServerStartedEvent event) {
+        com.frrnq.serverscore.worldborder.WorldBorderNotifications.start(
+                net.minecraftforge.fml.common.FMLCommonHandler.instance().getMinecraftServerInstance());
     }
 
     @EventHandler
@@ -40,6 +48,7 @@ public class FrrnqServersCore {
         com.frrnq.serverscore.network.CoreNetwork.init();
         proxy.init();
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new com.frrnq.serverscore.network.DeathSync());
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new com.frrnq.serverscore.network.TeamStatusSync());
         new com.frrnq.serverscore.death.DeathLimit();
         net.minecraftforge.fml.common.FMLCommonHandler.instance().bus().register(new com.frrnq.serverscore.teamspawn.PendingTeamHandler());
         worldRules = new WorldRules(event.getModConfigurationDirectory());

@@ -37,6 +37,8 @@ public final class DeathData extends WorldSavedData {
         }
         return lives.get(uuid);
     }
+    /** Reads existing lives without initializing a player record. */
+    public int peekLives(UUID uuid) { return lives.getOrDefault(uuid, limit); }
     public int getLimit() { return limit; }
     public BlockPos getSpawn() { return spawn; }
     public void setLives(UUID uuid, int value) {
@@ -54,6 +56,7 @@ public final class DeathData extends WorldSavedData {
     public void save(MinecraftServer server) {
         server.getWorld(0).getMapStorage().saveAllData();
         com.frrnq.serverscore.network.DeathSync.changed(server);
+        com.frrnq.serverscore.network.TeamStatusSync.changed();
     }
 
     @Override

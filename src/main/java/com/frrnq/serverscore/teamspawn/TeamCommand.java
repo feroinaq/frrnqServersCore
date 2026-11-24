@@ -17,6 +17,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import com.frrnq.serverscore.death.DeathRespawn;
+import com.frrnq.serverscore.network.CoreNetwork;
+import com.frrnq.serverscore.network.ResourceNoticeMessage;
 
 public final class TeamCommand extends CommandBase {
     @Override public String getName() { return "team"; }
@@ -114,7 +116,9 @@ public final class TeamCommand extends CommandBase {
                     if (pos == null) { message(sender, "\u041f\u0440\u043e\u043f\u0443\u0449\u0435\u043d " + player.getName() + ": \u0440\u044f\u0434\u043e\u043c \u0441\u043e \u0441\u043f\u0430\u0432\u043d\u043e\u043c \u043d\u0435\u0442 \u0431\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0433\u043e \u043c\u0435\u0441\u0442\u0430."); continue; }
                     TeamSpawn.teleport(player, pos); reserved.add(pos); count++;
                 }
-                message(sender, "\u0422\u0435\u043b\u0435\u043f\u043e\u0440\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0438\u0433\u0440\u043e\u043a\u043e\u0432: " + count); return;
+                message(sender, "\u0422\u0435\u043b\u0435\u043f\u043e\u0440\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0438\u0433\u0440\u043e\u043a\u043e\u0432: " + count);
+                CoreNetwork.CHANNEL.sendToAll(ResourceNoticeMessage.gameStart());
+                return;
             }
             default: throw new WrongUsageException(getUsage(sender));
         }

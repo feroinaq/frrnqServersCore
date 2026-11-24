@@ -10,7 +10,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 /** Server event only; it contains no client-to-server actions. */
 public final class ResourceNoticeMessage implements IMessage {
     public String location;
-    public enum Type { UPDATED, WARNING, AIRDROP }
+    public enum Type { UPDATED, WARNING, AIRDROP, GAME_START }
     public Type type;
     public ResourceNoticeMessage() {}
     public ResourceNoticeMessage(String location, boolean warning) { this.location = location; this.type = warning ? Type.WARNING : Type.UPDATED; }
@@ -18,6 +18,12 @@ public final class ResourceNoticeMessage implements IMessage {
         ResourceNoticeMessage message = new ResourceNoticeMessage();
         message.location = "";
         message.type = Type.AIRDROP;
+        return message;
+    }
+    public static ResourceNoticeMessage gameStart() {
+        ResourceNoticeMessage message = new ResourceNoticeMessage();
+        message.location = "";
+        message.type = Type.GAME_START;
         return message;
     }
     @Override public void toBytes(ByteBuf buffer) { ByteBufUtils.writeUTF8String(buffer, location); buffer.writeByte(type.ordinal()); }

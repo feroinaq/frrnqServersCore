@@ -24,6 +24,7 @@ public class FrrnqServersCore {
 
     @EventHandler
     public void serverStopped(net.minecraftforge.fml.common.event.FMLServerStoppedEvent event) {
+        com.frrnq.serverscore.video.VideoSessions.clear();
         com.frrnq.serverscore.worldborder.WorldBorderNotifications.stop();
         com.frrnq.serverscore.airdrop.AirDrops.stopped();
         com.frrnq.serverscore.network.DeathSync.clear();
@@ -46,6 +47,7 @@ public class FrrnqServersCore {
         com.frrnq.serverscore.resourcechests.ResourceChests.init();
         com.frrnq.serverscore.airdrop.AirDrops.init();
         com.frrnq.serverscore.network.CoreNetwork.init();
+        com.frrnq.serverscore.video.VideoDomains.load(event.getModConfigurationDirectory());
         proxy.init();
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new com.frrnq.serverscore.network.DeathSync());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new com.frrnq.serverscore.network.TeamStatusSync());

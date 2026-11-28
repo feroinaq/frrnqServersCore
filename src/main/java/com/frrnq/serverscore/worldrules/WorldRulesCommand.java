@@ -26,20 +26,20 @@ public final class WorldRulesCommand extends CommandBase {
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/fcore world info | /fcore world buildmin <y: 0..255> | /fcore world pvpmax <y: 0..255>";
+        return "/fcore world info | /fcore world buildmin <y: 0..255> | /fcore world buildmax <y: 0..255> | /fcore world pvpmax <y: 0..255>";
     }
 
     @Override
     public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
         if (args.length == 2 && "world".equals(args[0]) && "info".equals(args[1])) {
             sender.sendMessage(new TextComponentString("WorldRules: minBuildY=" + settings.getMinBuildY()
-                    + ", maxPvpY=" + settings.getMaxPvpY() + ", dimensionId=" + settings.getDimensionId()
+                    + ", maxBuildY=" + settings.getMaxBuildY() + ", maxPvpY=" + settings.getMaxPvpY() + ", dimensionId=" + settings.getDimensionId()
                     + ", \u0438\u0441\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435: minecraft:ladder; buildProtectionEnabled=" + settings.isBuildProtectionEnabled()
                     + ", pvpProtectionEnabled=" + settings.isPvpProtectionEnabled()));
             return;
         }
         if (args.length != 3 || !"world".equals(args[0])
-                || !("buildmin".equals(args[1]) || "pvpmax".equals(args[1]))) {
+                || !("buildmin".equals(args[1]) || "buildmax".equals(args[1]) || "pvpmax".equals(args[1]))) {
             throw new WrongUsageException(getUsage(sender));
         }
         int height;
@@ -54,9 +54,13 @@ public final class WorldRulesCommand extends CommandBase {
         try {
             if ("buildmin".equals(args[1])) {
                 settings.setMinBuildY(height);
+            } else if ("buildmax".equals(args[1])) {
+                settings.setMaxBuildY(height);
             } else {
                 settings.setMaxPvpY(height);
             }
+        } catch (IllegalArgumentException exception) {
+            throw new CommandException(exception.getMessage());
         } catch (IllegalStateException exception) {
             throw new CommandException("\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 WorldRules. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0436\u0443\u0440\u043d\u0430\u043b \u0441\u0435\u0440\u0432\u0435\u0440\u0430.");
         }
@@ -70,7 +74,7 @@ public final class WorldRulesCommand extends CommandBase {
             return getListOfStringsMatchingLastWord(args, "world");
         }
         if (args.length == 2 && "world".equals(args[0])) {
-            return getListOfStringsMatchingLastWord(args, "buildmin", "pvpmax", "info");
+            return getListOfStringsMatchingLastWord(args, "buildmin", "buildmax", "pvpmax", "info");
         }
         return Collections.emptyList();
     }

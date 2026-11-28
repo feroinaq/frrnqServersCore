@@ -48,3 +48,6 @@ usercache.json
 Thumbs.db
 
 AGENTS.md
+
+# VideoPlayer local files, cache and partial downloads
+/frrnq_videos/

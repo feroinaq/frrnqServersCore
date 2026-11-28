@@ -114,3 +114,37 @@ publishing {
         }
     }
 }
+
+
+// VideoPlayer loads the pinned upstream jars only on the client and keeps them separate from the mod jar.
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    videoRuntime {
+        transitive = false
+    }
+    compileOnly.extendsFrom videoRuntime
+}
+
+dependencies {
+    videoRuntime 'org.bytedeco:javacv:1.5.10@jar'
+    videoRuntime 'org.bytedeco:javacpp:1.5.10@jar'
+    videoRuntime 'org.bytedeco:javacpp:1.5.10:windows-x86_64@jar'
+    videoRuntime 'org.bytedeco:ffmpeg:6.1.1-1.5.10@jar'
+    videoRuntime 'org.bytedeco:ffmpeg:6.1.1-1.5.10:windows-x86_64@jar'
+}
+
+task prepareVideoRuntime(type: Copy) {
+    from configurations.videoRuntime
+    into "$buildDir/video-client/frrnq_video_libs"
+}
+
+task installVideoDevRuntime(type: Copy) {
+    from configurations.videoRuntime
+    into file('run/frrnq_video_libs')
+}
+
+build.dependsOn prepareVideoRuntime
+tasks.matching { it.name == 'runClient' }.all { dependsOn installVideoDevRuntime }
